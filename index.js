@@ -24,16 +24,16 @@ var BackButton = BackHandler || BackAndroid;
 var screen = Dimensions.get('window');
 
 var styles = StyleSheet.create({
-  flex: {
-    flex: 1
-  },
+
   wrapper: {
     backgroundColor: "white"
   },
+
   transparent: {
     zIndex: 2,
     backgroundColor: 'rgba(0,0,0,0)'
   },
+
   absolute: {
     position: "absolute",
     top: 0,
@@ -41,6 +41,7 @@ var styles = StyleSheet.create({
     left: 0,
     right: 0
   }
+
 });
 
 var ModalBox = createReactClass({
@@ -288,7 +289,7 @@ var ModalBox = createReactClass({
       isAnimateClose: true,
       isOpen: false,
     }, () => {
-      let animClose = Animated.timing(
+        let animClose = Animated.timing(
         this.state.position,
         {
           toValue: this.props.entry === 'top' ? -this.state.containerHeight : this.state.containerHeight,
@@ -297,11 +298,7 @@ var ModalBox = createReactClass({
           useNativeDriver: true,
         }
       ).start(() => {
-        // Keyboard.dismiss();   // make this optional. Easily user defined in .onClosed() callback
-        this.setState({
-          isAnimateClose: false,
-          animClose
-        });
+        this.setState({isAnimateClose: false, animClose});
         if (this.props.onClosed) this.props.onClosed();
       });
     });
@@ -334,12 +331,12 @@ var ModalBox = createReactClass({
 
     var onPanRelease = (evt, state) => {
       if (!inSwipeArea) return;
-      inSwipeArea = false;
       if (this.props.entry === 'top' ? -state.dy > this.props.swipeThreshold : state.dy > this.props.swipeThreshold)
         this.animateClose();
-      else if (!this.state.isOpen) {
+      else if (!this.state.isOpen || inSwipeArea) {
         this.animateOpen();
       }
+      inSwipeArea = false;
     };
 
     var animEvt = Animated.event([null, {customY: this.state.position}]);
@@ -425,7 +422,7 @@ var ModalBox = createReactClass({
       backdrop = (
         <TouchableWithoutFeedback onPress={this.props.backdropPressToClose ? this.close : null}>
           <Animated.View importantForAccessibility="no" style={[styles.absolute, {opacity: this.state.backdropOpacity}]}>
-            <View style={StyleSheet.flatten([styles.absolute, {backgroundColor:this.props.backdropColor, opacity: this.props.backdropOpacity}])}/>
+            <View style={[styles.absolute, {backgroundColor:this.props.backdropColor, opacity: this.props.backdropOpacity}]}/>
             {this.props.backdropContent || []}
           </Animated.View>
         </TouchableWithoutFeedback>
@@ -442,9 +439,9 @@ var ModalBox = createReactClass({
     return (
       <Animated.View
         onLayout={this.onViewLayout}
-        style={StyleSheet.flatten([styles.wrapper, size, this.props.style, {transform: [{translateY: this.state.position}, {translateX: offsetX}]}])}
+        style={[styles.wrapper, size, this.props.style, {transform: [{translateY: this.state.position}, {translateX: offsetX}]} ]}
         {...this.state.pan.panHandlers}>
-        {this.props.backdropPressToClose && <TouchableWithoutFeedback onPress={this.close}><View style={styles.absolute} /></TouchableWithoutFeedback>}
+        {this.props.backdropPressToClose && <TouchableWithoutFeedback onPress={this.close}><View style={[styles.absolute]} /></TouchableWithoutFeedback>}
         {this.props.children}
       </Animated.View>
     )
@@ -457,21 +454,16 @@ var ModalBox = createReactClass({
     
     var visible = this.state.isOpen || this.state.isAnimateOpen || this.state.isAnimateClose;
 
-    if (!visible) return <View/>
+    if (!visible) return <View/>;
 
     var content = (
-      <View
-          importantForAccessibility="yes"
-          accessibilityViewIsModal={true}
-          style={StyleSheet.flatten([styles.transparent, styles.absolute])}
-          pointerEvents={'box-none'}
-      >
-        <View style={styles.flex} pointerEvents={'box-none'} onLayout={this.onContainerLayout}>
-          {visible && this.renderBackdrop()}
-          {visible && this.renderContent()}
+      <View importantForAccessibility="yes" accessibilityViewIsModal={true} style={[styles.transparent, styles.absolute]} pointerEvents={'box-none'}>
+        <View style={{ flex: 1 }} pointerEvents={'box-none'} onLayout={this.onContainerLayout}>
+          {this.renderBackdrop()}
+          {this.renderContent()}
         </View>
       </View>
-    )
+    );
 
     if (!this.props.coverScreen) return content;
 
@@ -498,6 +490,7 @@ var ModalBox = createReactClass({
       this.onViewLayoutCalculated = () => {
         this.setState({});
         this.animateOpen();
+        if(this.props.backButtonClose && Platform.OS === 'android') BackButton.addEventListener('hardwareBackPress', this.onBackPress)
         delete this.onViewLayoutCalculated;
       };
       this.setState({isAnimateOpen : true});
@@ -508,8 +501,11 @@ var ModalBox = createReactClass({
     if (this.props.isDisabled) return;
     if (!this.state.isAnimateClose && (this.state.isOpen || this.state.isAnimateOpen)) {
       this.animateClose();
+      if(this.props.backButtonClose && Platform.OS === 'android') BackButton.removeEventListener('hardwareBackPress', this.onBackPress)
     }
   }
+
+
 });
 
 module.exports = ModalBox;
